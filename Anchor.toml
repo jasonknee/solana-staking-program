@@ -1,0 +1,12 @@
+[programs.localnet]
+solana_staking_program = "DScigetYS5Xu8yL7sUKe5P9pcvbyuJhdxE7rXEyyeDJH"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "localnet"
+wallet = "/Users/jayce/.config/solana/id.json"
+
+[scripts]
+test = "mocha -t 1000000 tests/"
