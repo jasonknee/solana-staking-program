@@ -176,6 +176,11 @@ function App() {
           signers: [escrowAccount],
         }
       )
+
+      console.log(escrowAccount.publicKey.toString())
+      const account = await program.account.escrowAccount.fetch(escrowAccount.publicKey);
+      console.log('account: ', account);
+      console.log(account);
     } catch (err) {
       console.log("Transaction error: ", err);
     }
@@ -199,6 +204,46 @@ function App() {
     // } catch (err) {
     //   console.log("Transaction error: ", err);
     // }
+  }
+
+  async function cancel() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+
+    /* PDAs */
+    const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("token-seed"))],
+      program.programId
+    );
+    const vault_account_pda = _vault_account_pda;
+    const vault_account_bump = _vault_account_bump;
+
+    const [_vault_authority_pda, _vault_authority_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
+      program.programId
+    );
+    const vault_authority_pda = _vault_authority_pda;
+    /* !PDAS */
+
+
+    const tokenA = tokens[12];
+    const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
+      tokenA,
+      provider.wallet,
+      provider.connection
+    );
+    // Cancel the escrow.
+    await program.rpc.cancelEscrow({
+      accounts: {
+        initializer: provider.wallet.publicKey,
+        initializerDepositTokenAccount: initializerTokenAccountA,
+        vaultAccount: vault_account_pda,
+        vaultAuthority: vault_authority_pda,
+        escrowAccount: new PublicKey('F9n3acPfMeR2uqozi8oMtSK7bThDVKKGKFdTGcRKq9gS'),
+        tokenProgram: TOKEN_PROGRAM_ID,
+      },
+    });
+
   }
 
   async function update() {
@@ -230,7 +275,10 @@ function App() {
       <div className="App">
         <div>
           {
-            !value && (<button onClick={initialize}>Initialize</button>)
+            !value && (<div>
+              <button onClick={initialize}>Initialize</button>
+              <button onClick={cancel}>cancel</button>
+              </div>)
           }
 
           {
