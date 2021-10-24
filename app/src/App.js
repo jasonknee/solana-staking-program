@@ -1,20 +1,22 @@
 
 import './App.css';
 import { useState } from 'react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection, Transaction } from '@solana/web3.js';
 import { Program, Provider, web3 } from '@project-serum/anchor';
 import idl from './idl.json';
 
+import * as bip39 from 'bip39';
+import * as anchor from '@project-serum/anchor';
 import { getPhantomWallet } from '@solana/wallet-adapter-wallets';
 import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
 import { tokens } from './jajang.json';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { getOrCreateAssociatedTokenAccountAddress } from './util';
 const { TOKEN_PROGRAM_ID, Token, AccountLayout } = require("@solana/spl-token");
-const { SystemProgram, Keypair } = web3;
+const { SystemProgram, Keypair, SYSVAR_RENT_PUBKEY, PublicKey } = web3;
 require('@solana/wallet-adapter-react-ui/styles.css');
-
-const wallets = [ getPhantomWallet() ]
+// const anchor = require("@project-serum/anchor");
+const wallets = [getPhantomWallet()]
 
 const baseAccount = Keypair.generate();
 const opts = {
@@ -40,86 +42,163 @@ function App() {
     return provider;
   }
 
-  async function getTokenAccountOfMint(tokenMintAddress, wallet, connection) {
-    console.log(wallet);
-    const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
+  async function initialize() {
+    const provider = await getProvider();
+    const program = new Program(idl, programID, provider);
+
+    /* PDAs */
+    const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("token-seed"))],
+      program.programId
+    );
+    const vault_account_pda = _vault_account_pda;
+    const vault_account_bump = _vault_account_bump;
+
+    const [_vault_authority_pda, _vault_authority_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
+      program.programId
+    );
+    const vault_authority_pda = _vault_authority_pda;
+    /* !PDAS */
+
+    const tokenA = tokens[12];
+    const tokenB = tokens[2];
+    const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
+      tokenA,
+      provider.wallet,
+      provider.connection
+    );
+    console.log(initializerTokenAccountA.toString());
+    // const initializerTokenAccountA = new PublicKey(initializerTokenAccountAAddress);
+    const initializerTokenAccountInfoA = await provider.connection.getAccountInfo(initializerTokenAccountA);
+    console.log(initializerTokenAccountInfoA)
+
+
+
+
+    /* */
+    let associatedTokenAccountAddress;
+    const mintPublicKey = new PublicKey(tokenB);
     const mintToken = new Token(
-      connection,
+      provider.connection,
       mintPublicKey,
       TOKEN_PROGRAM_ID,
-      wallet //.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
-    );
-          
-    const fromTokenAccount = await mintToken.getOrCreateAssociatedAccountInfo(
-      wallet.publicKey
+      provider.wallet
     );
 
-    console.log(fromTokenAccount);
-    return fromTokenAccount;
-  }
-
-  async function getTokenAccountOfNewToken(tokenMintAddress, wallet, connection) {
-    const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
-    const mintToken = new Token(
-      connection,
-      mintPublicKey,
-      TOKEN_PROGRAM_ID,
-      wallet//.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
-    );
-
-    // Get the derived address of the destination wallet which will hold the custom token
-    const associatedDestinationTokenAddr = await Token.getAssociatedTokenAddress(
+    associatedTokenAccountAddress = await Token.getAssociatedTokenAddress(
       mintToken.associatedProgramId,
       mintToken.programId,
       mintPublicKey,
       wallet.publicKey
     );
 
-    console.log(associatedDestinationTokenAddr);
-    return associatedDestinationTokenAddr;
-  }
+    const receiverAccount = await provider.connection.getAccountInfo(associatedTokenAccountAddress);
 
-  async function initialize() {    
-    const provider = await getProvider();
-    
-    // which token account do I want to send 
-    const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(tokens[4], provider.wallet, provider.connection);
-    console.log(initializerTokenAccountA.toString())
-    // which token account do I want to receive
-    const initializerTokenAccountB = await getOrCreateAssociatedTokenAccountAddress(tokens[2], provider.wallet, provider.connection);
-    console.log(initializerTokenAccountB.toString())
-    // console.log(initializerTokenAccountB.toString())
+    if (receiverAccount === null) {
+      const instruction = await Token.createAssociatedTokenAccountInstruction(
+        mintToken.associatedProgramId,
+        mintToken.programId,
+        mintPublicKey,
+        associatedTokenAccountAddress,
+        provider.wallet.publicKey,
+        provider.wallet.publicKey
+      );
+
+      let transaction = new Transaction({
+        feePayer: provider.wallet.publicKey
+      }).add(instruction);
+      let { blockhash } = await provider.connection.getRecentBlockhash();
+      transaction.recentBlockhash = blockhash;
+      let signed = await provider.wallet.signTransaction(transaction);
+      const txid = await provider.connection.sendRawTransaction(signed.serialize());
+      await provider.connection.confirmTransaction(txid);
+    }
 
 
-    // console.log(provider.wallet)
-    // const address = Token.getAssociatedTokenAddress(
-    //   'associatedProgramId: PublicKey',
-    //   'programId: PublicKey',
-    //   'mint: PublicKey',
-    //   'owner: PublicKey',
-    // )
-    
+
+
+    const initializerTokenAccountB = await getOrCreateAssociatedTokenAccountAddress(
+      tokenB,
+      provider.wallet,
+      provider.connection
+    );
+    // console.log(initializerTokenAccountB.toString());
+    // const initializerTokenAccountInfoB = await provider.connection.getAccountInfo(initializerTokenAccountB);
+    // console.log(initializerTokenAccountInfoB)
+
+    const escrowAccount = Keypair.generate();
+
     /* create the program interface combining the idl, program ID, and provider */
-    const program = new Program(idl, programID, provider);
-    try {
-      /* interact with the program via rpc */
-      await program.rpc.initialize("Hello World", {
+    console.log({
+      vault_account_bump: vault_account_bump,
+      amountA: new anchor.BN(1),
+      amountB: new anchor.BN(2),
+      body: {
         accounts: {
-          baseAccount: baseAccount.publicKey,
-          user: provider.wallet.publicKey,
+          initializer: provider.wallet.publicKey,
+          vaultAccount: vault_account_pda,
+          mint: tokens[12],
+          initializerDepositTokenAccount: initializerTokenAccountA,
+          initializerReceiveTokenAccount: initializerTokenAccountB,
+          escrowAccount: escrowAccount.publicKey,
           systemProgram: SystemProgram.programId,
+          rent: SYSVAR_RENT_PUBKEY,
+          tokenProgram: TOKEN_PROGRAM_ID,
         },
-        signers: [baseAccount]
-      });
-
-      const account = await program.account.baseAccount.fetch(baseAccount.publicKey);
-      console.log('account: ', account);
-      console.log(account.startTimestamp.toString());
-      setValue(account.data.toString());
-      setDataList(account.dataList);
+        instructions: [
+          await program.account.escrowAccount.createInstruction(escrowAccount),
+        ],
+        signers: [escrowAccount],
+      }
+    });
+    try {
+      /* init escrow */
+      await program.rpc.initializeEscrow(
+        vault_account_bump,
+        new anchor.BN(1),
+        new anchor.BN(1),
+        {
+          accounts: {
+            initializer: provider.wallet.publicKey,
+            vaultAccount: vault_account_pda,
+            mint: tokens[12],
+            initializerDepositTokenAccount: initializerTokenAccountA,
+            initializerReceiveTokenAccount: initializerTokenAccountB,
+            escrowAccount: escrowAccount.publicKey,
+            systemProgram: SystemProgram.programId,
+            rent: SYSVAR_RENT_PUBKEY,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          },
+          instructions: [
+            await program.account.escrowAccount.createInstruction(escrowAccount),
+          ],
+          signers: [escrowAccount],
+        }
+      )
     } catch (err) {
       console.log("Transaction error: ", err);
     }
+
+    // try {
+    //   /* interact with the program via rpc */
+    //   await program.rpc.initialize("Hello World", {
+    //     accounts: {
+    //       baseAccount: baseAccount.publicKey,
+    //       user: provider.wallet.publicKey,
+    //       systemProgram: SystemProgram.programId,
+    //     },
+    //     signers: [baseAccount]
+    //   });
+
+    //   const account = await program.account.baseAccount.fetch(baseAccount.publicKey);
+    //   console.log('account: ', account);
+    //   console.log(account.startTimestamp.toString());
+    //   setValue(account.data.toString());
+    //   setDataList(account.dataList);
+    // } catch (err) {
+    //   console.log("Transaction error: ", err);
+    // }
   }
 
   async function update() {
@@ -142,7 +221,7 @@ function App() {
 
   if (!wallet.connected) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop:'100px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
         <WalletMultiButton />
       </div>
     )
@@ -188,4 +267,4 @@ const AppWithProvider = () => (
   </ConnectionProvider>
 )
 
-export default AppWithProvider;    
+export default AppWithProvider;
