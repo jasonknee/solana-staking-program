@@ -1,12 +1,12 @@
 [package]
-name = "solana-staking-program"
+name = "escrow"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2018"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "solana_staking_program"
+name = "escrow"
 
 [features]
 no-entrypoint = []
