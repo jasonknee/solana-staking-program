@@ -1,26 +1,26 @@
-
 import './App.css';
 import { useState } from 'react';
-import { Connection, PublicKey } from '@solana/web3.js';
+import { Connection } from '@solana/web3.js';
 import { Program, Provider, web3 } from '@project-serum/anchor';
 import idl from './idl.json';
-
+const { PublicKey, Transaction, SystemProgram, Keypair } = web3;
 import { getPhantomWallet } from '@solana/wallet-adapter-wallets';
 import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
-import { tokens } from './jajang.json';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { getOrCreateAssociatedTokenAccountAddress } from './util';
+import { tokens } from './jajang.json';
 const { TOKEN_PROGRAM_ID, Token, AccountLayout } = require("@solana/spl-token");
-const { SystemProgram, Keypair } = web3;
+const anchor = require("@project-serum/anchor");
+const assert = require("assert");
 require('@solana/wallet-adapter-react-ui/styles.css');
 
-const wallets = [ getPhantomWallet() ]
+const wallets = [getPhantomWallet()]
 
 const baseAccount = Keypair.generate();
 const opts = {
   preflightCommitment: "processed"
 }
 const programID = new PublicKey(idl.metadata.address);
+const escrowAccount = anchor.web3.Keypair.generate();
 
 function App() {
   const [value, setValue] = useState('');
@@ -31,7 +31,7 @@ function App() {
   async function getProvider() {
     /* create the provider and return it to the caller */
     /* network set to local network for now */
-    const network = "https://api.devnet.solana.com"; //"http://127.0.0.1:8899";
+    const network = "http://127.0.0.1:8899";
     const connection = new Connection(network, opts.preflightCommitment);
 
     const provider = new Provider(
@@ -40,68 +40,79 @@ function App() {
     return provider;
   }
 
-  async function getTokenAccountOfMint(tokenMintAddress, wallet, connection) {
-    console.log(wallet);
-    const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
-    const mintToken = new Token(
-      connection,
-      mintPublicKey,
-      TOKEN_PROGRAM_ID,
-      wallet //.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
-    );
-          
-    const fromTokenAccount = await mintToken.getOrCreateAssociatedAccountInfo(
-      wallet.publicKey
-    );
-
-    console.log(fromTokenAccount);
-    return fromTokenAccount;
-  }
-
-  async function getTokenAccountOfNewToken(tokenMintAddress, wallet, connection) {
-    const mintPublicKey = new web3.PublicKey(tokenMintAddress);    
-    const mintToken = new Token(
-      connection,
-      mintPublicKey,
-      TOKEN_PROGRAM_ID,
-      wallet//.payer // the wallet owner will pay to transfer and to create recipients associated token account if it does not yet exist.
-    );
-
-    // Get the derived address of the destination wallet which will hold the custom token
-    const associatedDestinationTokenAddr = await Token.getAssociatedTokenAddress(
-      mintToken.associatedProgramId,
-      mintToken.programId,
-      mintPublicKey,
-      wallet.publicKey
-    );
-
-    console.log(associatedDestinationTokenAddr);
-    return associatedDestinationTokenAddr;
-  }
-
-  async function initialize() {    
+  async function initialize() {
     const provider = await getProvider();
     
-    // which token account do I want to send 
-    const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(tokens[4], provider.wallet, provider.connection);
-    console.log(initializerTokenAccountA.toString())
-    // which token account do I want to receive
-    const initializerTokenAccountB = await getOrCreateAssociatedTokenAccountAddress(tokens[2], provider.wallet, provider.connection);
-    console.log(initializerTokenAccountB.toString())
-    // console.log(initializerTokenAccountB.toString())
 
+    /* PDAs */
+    const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("token-seed"))],
+      program.programId
+    );
+    const vault_account_pda = _vault_account_pda;
+    const vault_account_bump = _vault_account_bump;
 
-    // console.log(provider.wallet)
-    // const address = Token.getAssociatedTokenAddress(
-    //   'associatedProgramId: PublicKey',
-    //   'programId: PublicKey',
-    //   'mint: PublicKey',
-    //   'owner: PublicKey',
-    // )
+    const [_vault_authority_pda, _vault_authority_bump] = await PublicKey.findProgramAddress(
+      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
+      program.programId
+    );
+    const vault_authority_pda = _vault_authority_pda;
+    /* !PDAS */
     
+    /* create token a accounts */
+    const initializerTokenAccountA = anchor.web3.Keypair.generate();
+    const initializerTokenAccountB = anchor.web3.Keypair.generate();
+
+
+    const initializerTokenAccountA = new Account();
+    const createinitializerTokenAccountAIx = SystemProgram.createAccount({
+      programId: TOKEN_PROGRAM_ID,
+      space: AccountLayout.span,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(AccountLayout.span, 'singleGossip'),
+      fromPubkey: provider.wallet.publicKey,
+      newAccountPubkey: initializerTokenAccountA.publicKey
+    });
+
+    const initializerTokenAccountB = new Account();
+    const createinitializerTokenAccountBIx = SystemProgram.createAccount({
+      programId: TOKEN_PROGRAM_ID,
+      space: AccountLayout.span,
+      lamports: await provider.connection.getMinimumBalanceForRentExemption(AccountLayout.span, 'singleGossip'),
+      fromPubkey: provider.wallet.publicKey,
+      newAccountPubkey: initializerTokenAccountB.publicKey
+    });
+
     /* create the program interface combining the idl, program ID, and provider */
     const program = new Program(idl, programID, provider);
     try {
+      /* init escrow */
+      await program.rpc.initializeEscrow(
+        vault_account_bump,
+        new anchor.BN(1),
+        new anchor.BN(1),
+        {
+          accounts: {
+            initializer: provider.wallet.publicKey,
+            vaultAccount: vault_account_pda,
+            mint: tokens[0],
+            initializerDepositTokenAccount: initializerTokenAccountA,
+            initializerReceiveTokenAccount: initializerTokenAccountB,
+            escrowAccount: `escrowAccount.publicKey`,
+            systemProgram: `anchor.web3.SystemProgram.programId`,
+            rent: `anchor.web3.SYSVAR_RENT_PUBKEY`,
+            tokenProgram: `TOKEN_PROGRAM_ID`,
+          },
+          instructions: [
+            await program.account.dummyA.createInstruction(dummyA),
+            await program.account.dummyB.createInstruction(dummyB),
+            await program.account.escrowAccount.createInstruction(escrowAccount),
+          ],
+          signers: [`escrowAccount`, `initializerMainAccount`],
+        }
+      )
+
+
+
       /* interact with the program via rpc */
       await program.rpc.initialize("Hello World", {
         accounts: {
@@ -142,7 +153,7 @@ function App() {
 
   if (!wallet.connected) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', marginTop:'100px' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
         <WalletMultiButton />
       </div>
     )
@@ -188,4 +199,4 @@ const AppWithProvider = () => (
   </ConnectionProvider>
 )
 
-export default AppWithProvider;    
+export default AppWithProvider;

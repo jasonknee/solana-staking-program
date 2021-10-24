@@ -1,5 +1,5 @@
 [programs.localnet]
-solana_staking_program = "DScigetYS5Xu8yL7sUKe5P9pcvbyuJhdxE7rXEyyeDJH"
+solana_staking_program = "FySbTTRioMtRsS2CFvRtSSQbnv2QNQNfPD7Ng5NMS67u"
 
 [registry]
 url = "https://anchor.projectserum.com"
