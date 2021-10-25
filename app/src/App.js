@@ -70,11 +70,11 @@ function App() {
 
   }
 
-  async function initialize() {
+  async function initialize(tokenA) {
+    console.log(tokenA);
+    
     const provider = getProvider();
     const program = new Program(idl, programID, provider);
-
-    await getCollections(provider.wallet.publicKey);
 
     /* PDAs */
     const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
@@ -91,7 +91,7 @@ function App() {
     const vault_authority_pda = _vault_authority_pda;
     /* !PDAS */
 
-    const tokenA = tokens[12];
+    // const tokenA = tokens[12];
     const tokenB = tokens[2];
     const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
       tokenA,
@@ -252,7 +252,7 @@ function App() {
     const assets = await getAccountAssets(pubKey);
     console.log(assets);
 
-    assets.forEach(async(a) => {
+    assets.forEach(async (a) => {
       const metadata = await get(a.uri);
       a.metadata = metadata;
     })
@@ -264,15 +264,11 @@ function App() {
     return assets;
   }
 
-  function renderNFT(nfts) {
-    if (nfts) {
-      return nfts.map((nft,index) => {
-          <div key={index}>
-            <span>{ nft.data.name }</span>
-          </div>
-      })
-    }
+  async function stake(token) {
+    console.log(token);
+    await initialize(token.mint);
   }
+
 
 
   if (!wallet.connected) {
@@ -283,14 +279,14 @@ function App() {
     )
   } else {
     return (
-      <div className="App">
+      <div className="App" style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
 
-        <div>
+        {/* <div>
           {
             !value && (<div>
-              <button onClick={initialize}>Initialize</button>
-              <button onClick={cancel}>cancel</button>
-              </div>)
+              <button className="btn btn-primary" onClick={initialize}>Initialize</button>
+              <button className="btn btn-secondary" onClick={cancel}>cancel</button>
+            </div>)
           }
 
           {
@@ -311,19 +307,28 @@ function App() {
           {
             dataList.map((d, i) => <h4 key={i}>{d}</h4>)
           }
-        </div>
-        <div>
-            <button className="btn btn-sm" type="button" onClick={getStarted}>Refresh NFTs</button>
-          {
-              nfts.map((d, i) => 
-              <div key={i}>
-                <h4>{d.data.name}</h4>
-                <img className="image" src={d.data.metadata.image}></img>
-              </div>
+        </div> */}
+        <div className="container">
+        <button className="btn btn-outline-primary mb-4" type="button" onClick={getStarted}>Refresh NFTs</button>
+          <div className="row">
+            {
+              nfts.map((d, i) =>
+                <div className="col-sm-6 col-md-4 col-lg-3 col-xl-2 mb-2" key={i}>
+                  <div className="card">
+                    <img src={d.data.metadata.image} className="card-img-top" alt="..." />
+                    <div className="card-body">
+                      <h5 className="card-title">{d.data.name}</h5>
+                      <p className="card-text">{d.data.metadata?.collection?.name}</p>
+                    </div>
+                    <div className="card-footer">
+                      <button className="btn btn-sm btn-outline-primary" onClick={async () => stake(d)}>Stake</button>
+                    </div>
+                  </div>
+                </div>
               )
-            // renderNFT(nfts)
-          }
+            }
           </div>
+        </div>
       </div>
     );
   }
