@@ -5,18 +5,21 @@ import { Connection, Transaction } from '@solana/web3.js';
 import { Program, Provider, web3 } from '@project-serum/anchor';
 import idl from './idl.json';
 
-import * as bip39 from 'bip39';
+import { getTokenAccountsByOwner, getTokenNftMetadata } from './utils/solana.client';
 import * as anchor from '@project-serum/anchor';
 import { getPhantomWallet } from '@solana/wallet-adapter-wallets';
 import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
 import { tokens } from './jajang.json';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { getOrCreateAssociatedTokenAccountAddress } from './util';
+import { get, getAccountAssets } from './utils/nfteyez.client';
+import axios from 'axios';
 const { TOKEN_PROGRAM_ID, Token, AccountLayout } = require("@solana/spl-token");
 const { SystemProgram, Keypair, SYSVAR_RENT_PUBKEY, PublicKey } = web3;
 require('@solana/wallet-adapter-react-ui/styles.css');
 // const anchor = require("@project-serum/anchor");
 const wallets = [getPhantomWallet()]
+
 
 const baseAccount = Keypair.generate();
 const opts = {
@@ -29,8 +32,10 @@ function App() {
   const [dataList, setDataList] = useState([]);
   const [input, setInput] = useState('');
   const wallet = useWallet()
+  let started = false;
+  const [nfts, setNfts] = useState([]);
 
-  async function getProvider() {
+  function getProvider() {
     /* create the provider and return it to the caller */
     /* network set to local network for now */
     const network = "https://api.devnet.solana.com"; //"http://127.0.0.1:8899";
@@ -42,9 +47,34 @@ function App() {
     return provider;
   }
 
+  async function getStarted() {
+    const provider = getProvider();
+    const tokens = await getTokenAccountsByOwner(provider.wallet.publicKey.toString());
+    console.log(tokens);
+
+    const list = [];
+    for (const token of tokens) {
+      const fullToken = await getTokenNftMetadata(token.mint);
+      list.push(fullToken);
+      console.log(fullToken);
+    }
+    // tokens.forEach(async(token) => {
+    //   const fullToken = await getTokenNftMetadata(token.mint);
+    //   list.push(fullToken);
+    //   console.log(fullToken);
+    // })
+
+    setNfts(list);
+    console.log(list);
+    console.log(nfts);
+
+  }
+
   async function initialize() {
-    const provider = await getProvider();
+    const provider = getProvider();
     const program = new Program(idl, programID, provider);
+
+    await getCollections(provider.wallet.publicKey);
 
     /* PDAs */
     const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
@@ -123,35 +153,8 @@ function App() {
       provider.wallet,
       provider.connection
     );
-    // console.log(initializerTokenAccountB.toString());
-    // const initializerTokenAccountInfoB = await provider.connection.getAccountInfo(initializerTokenAccountB);
-    // console.log(initializerTokenAccountInfoB)
 
     const escrowAccount = Keypair.generate();
-
-    /* create the program interface combining the idl, program ID, and provider */
-    console.log({
-      vault_account_bump: vault_account_bump,
-      amountA: new anchor.BN(1),
-      amountB: new anchor.BN(2),
-      body: {
-        accounts: {
-          initializer: provider.wallet.publicKey,
-          vaultAccount: vault_account_pda,
-          mint: tokens[12],
-          initializerDepositTokenAccount: initializerTokenAccountA,
-          initializerReceiveTokenAccount: initializerTokenAccountB,
-          escrowAccount: escrowAccount.publicKey,
-          systemProgram: SystemProgram.programId,
-          rent: SYSVAR_RENT_PUBKEY,
-          tokenProgram: TOKEN_PROGRAM_ID,
-        },
-        instructions: [
-          await program.account.escrowAccount.createInstruction(escrowAccount),
-        ],
-        signers: [escrowAccount],
-      }
-    });
     try {
       /* init escrow */
       await program.rpc.initializeEscrow(
@@ -184,26 +187,6 @@ function App() {
     } catch (err) {
       console.log("Transaction error: ", err);
     }
-
-    // try {
-    //   /* interact with the program via rpc */
-    //   await program.rpc.initialize("Hello World", {
-    //     accounts: {
-    //       baseAccount: baseAccount.publicKey,
-    //       user: provider.wallet.publicKey,
-    //       systemProgram: SystemProgram.programId,
-    //     },
-    //     signers: [baseAccount]
-    //   });
-
-    //   const account = await program.account.baseAccount.fetch(baseAccount.publicKey);
-    //   console.log('account: ', account);
-    //   console.log(account.startTimestamp.toString());
-    //   setValue(account.data.toString());
-    //   setDataList(account.dataList);
-    // } catch (err) {
-    //   console.log("Transaction error: ", err);
-    // }
   }
 
   async function cancel() {
@@ -264,6 +247,34 @@ function App() {
     setInput('');
   }
 
+  async function getCollections(pubKey) {
+    console.log(pubKey);
+    const assets = await getAccountAssets(pubKey);
+    console.log(assets);
+
+    assets.forEach(async(a) => {
+      const metadata = await get(a.uri);
+      a.metadata = metadata;
+    })
+
+    console.log(assets);
+    // await Promise.all(
+    //   assets.map(a => get(a.uri))
+    // )
+    return assets;
+  }
+
+  function renderNFT(nfts) {
+    if (nfts) {
+      return nfts.map((nft,index) => {
+          <div key={index}>
+            <span>{ nft.data.name }</span>
+          </div>
+      })
+    }
+  }
+
+
   if (!wallet.connected) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
@@ -273,6 +284,7 @@ function App() {
   } else {
     return (
       <div className="App">
+
         <div>
           {
             !value && (<div>
@@ -300,6 +312,18 @@ function App() {
             dataList.map((d, i) => <h4 key={i}>{d}</h4>)
           }
         </div>
+        <div>
+            <button className="btn btn-sm" type="button" onClick={getStarted}>Refresh NFTs</button>
+          {
+              nfts.map((d, i) => 
+              <div key={i}>
+                <h4>{d.data.name}</h4>
+                <img className="image" src={d.data.metadata.image}></img>
+              </div>
+              )
+            // renderNFT(nfts)
+          }
+          </div>
       </div>
     );
   }
