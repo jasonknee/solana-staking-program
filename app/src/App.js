@@ -23,7 +23,7 @@ const opts = {
   preflightCommitment: "processed"
 }
 const programID = new PublicKey(idl.metadata.address);
-
+let escrowPubKey = '';
 function App() {
   const [value, setValue] = useState('');
   const [dataList, setDataList] = useState([]);
@@ -178,6 +178,7 @@ function App() {
       )
 
       console.log(escrowAccount.publicKey.toString())
+      escrowPubKey = escrowAccount.publicKey.toString();
       const account = await program.account.escrowAccount.fetch(escrowAccount.publicKey);
       console.log('account: ', account);
       console.log(account);
@@ -239,7 +240,7 @@ function App() {
         initializerDepositTokenAccount: initializerTokenAccountA,
         vaultAccount: vault_account_pda,
         vaultAuthority: vault_authority_pda,
-        escrowAccount: new PublicKey('F9n3acPfMeR2uqozi8oMtSK7bThDVKKGKFdTGcRKq9gS'),
+        escrowAccount: new PublicKey(escrowPubKey),
         tokenProgram: TOKEN_PROGRAM_ID,
       },
     });
