@@ -27,6 +27,9 @@ const opts = {
 }
 const programID = new PublicKey(idl.metadata.address);
 
+let escrowAccountPubKey = '';
+let selectedTokenMintAddress = '';
+
 function App() {
   const [value, setValue] = useState('');
   const [dataList, setDataList] = useState([]);
@@ -72,7 +75,7 @@ function App() {
 
   async function initialize(tokenA) {
     console.log(tokenA);
-    
+    selectedTokenMintAddress = tokenA;
     const provider = getProvider();
     const program = new Program(idl, programID, provider);
 
@@ -155,6 +158,7 @@ function App() {
     );
 
     const escrowAccount = Keypair.generate();
+    console.log('escrowAccountPubKey: ' + escrowAccount.publicKey.toString())
     try {
       /* init escrow */
       await program.rpc.initializeEscrow(
@@ -181,9 +185,11 @@ function App() {
       )
 
       console.log(escrowAccount.publicKey.toString())
+      escrowAccountPubKey = escrowAccount.publicKey.toString();
       const account = await program.account.escrowAccount.fetch(escrowAccount.publicKey);
       console.log('account: ', account);
       console.log(account);
+      setValue(escrowAccountPubKey);
     } catch (err) {
       console.log("Transaction error: ", err);
     }
@@ -208,10 +214,8 @@ function App() {
     const vault_authority_pda = _vault_authority_pda;
     /* !PDAS */
 
-
-    const tokenA = tokens[12];
     const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
-      tokenA,
+      selectedTokenMintAddress,
       provider.wallet,
       provider.connection
     );
@@ -222,7 +226,7 @@ function App() {
         initializerDepositTokenAccount: initializerTokenAccountA,
         vaultAccount: vault_account_pda,
         vaultAuthority: vault_authority_pda,
-        escrowAccount: new PublicKey('F9n3acPfMeR2uqozi8oMtSK7bThDVKKGKFdTGcRKq9gS'),
+        escrowAccount: new PublicKey(escrowAccountPubKey),
         tokenProgram: TOKEN_PROGRAM_ID,
       },
     });
@@ -247,23 +251,6 @@ function App() {
     setInput('');
   }
 
-  async function getCollections(pubKey) {
-    console.log(pubKey);
-    const assets = await getAccountAssets(pubKey);
-    console.log(assets);
-
-    assets.forEach(async (a) => {
-      const metadata = await get(a.uri);
-      a.metadata = metadata;
-    })
-
-    console.log(assets);
-    // await Promise.all(
-    //   assets.map(a => get(a.uri))
-    // )
-    return assets;
-  }
-
   async function stake(token) {
     console.log(token);
     await initialize(token.mint);
@@ -280,36 +267,13 @@ function App() {
   } else {
     return (
       <div className="App" style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
-
-        {/* <div>
-          {
-            !value && (<div>
-              <button className="btn btn-primary" onClick={initialize}>Initialize</button>
-              <button className="btn btn-secondary" onClick={cancel}>cancel</button>
-            </div>)
-          }
-
-          {
-            value ? (
-              <div>
-                <h2>Current value: {value}</h2>
-                <input
-                  placeholder="Add new data"
-                  onChange={e => setInput(e.target.value)}
-                  value={input}
-                />
-                <button onClick={update}>Add data</button>
-              </div>
-            ) : (
-              <h3>Please Inialize.</h3>
-            )
-          }
-          {
-            dataList.map((d, i) => <h4 key={i}>{d}</h4>)
-          }
-        </div> */}
         <div className="container">
-        <button className="btn btn-outline-primary mb-4" type="button" onClick={getStarted}>Refresh NFTs</button>
+          <button className="btn btn-outline-primary mb-4" type="button" onClick={getStarted}>Refresh NFTs</button>
+          {
+            value?.length ? (<div>
+              <button className="btn btn-secondary" onClick={cancel}>cancel</button>
+            </div>) : <div></div>
+          }
           <div className="row">
             {
               nfts.map((d, i) =>
