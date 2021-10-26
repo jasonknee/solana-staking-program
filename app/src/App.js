@@ -31,6 +31,7 @@ let escrowAccountPubKey = '';
 let selectedTokenMintAddress = '';
 
 function App() {
+  const [currentToken, setCurrentToken] = useState();
   const [value, setValue] = useState('');
   const [dataList, setDataList] = useState([]);
   const [input, setInput] = useState('');
@@ -73,9 +74,9 @@ function App() {
 
   }
 
-  async function initialize(tokenA) {
-    console.log(tokenA);
-    selectedTokenMintAddress = tokenA;
+  async function initialize(token) {
+    const tokenA = token.mint;
+
     const provider = getProvider();
     const program = new Program(idl, programID, provider);
 
@@ -95,7 +96,7 @@ function App() {
     /* !PDAS */
 
     // const tokenA = tokens[12];
-    const tokenB = tokens[2];
+    const tokenB = tokens[7];
     const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
       tokenA,
       provider.wallet,
@@ -127,7 +128,6 @@ function App() {
     );
 
     const receiverAccount = await provider.connection.getAccountInfo(associatedTokenAccountAddress);
-
     if (receiverAccount === null) {
       const instruction = await Token.createAssociatedTokenAccountInstruction(
         mintToken.associatedProgramId,
@@ -148,9 +148,6 @@ function App() {
       await provider.connection.confirmTransaction(txid);
     }
 
-
-
-
     const initializerTokenAccountB = await getOrCreateAssociatedTokenAccountAddress(
       tokenB,
       provider.wallet,
@@ -169,7 +166,7 @@ function App() {
           accounts: {
             initializer: provider.wallet.publicKey,
             vaultAccount: vault_account_pda,
-            mint: tokens[12],
+            mint: tokenA,
             initializerDepositTokenAccount: initializerTokenAccountA,
             initializerReceiveTokenAccount: initializerTokenAccountB,
             escrowAccount: escrowAccount.publicKey,
@@ -190,6 +187,8 @@ function App() {
       console.log('account: ', account);
       console.log(account);
       setValue(escrowAccountPubKey);
+      selectedTokenMintAddress = token.mint;
+      setCurrentToken(token);
     } catch (err) {
       console.log("Transaction error: ", err);
     }
@@ -231,6 +230,11 @@ function App() {
       },
     });
 
+    selectedTokenMintAddress = null;
+    escrowAccountPubKey = null;
+    setCurrentToken(null);
+    setValue(null);
+    getStarted();
   }
 
   async function update() {
@@ -252,8 +256,7 @@ function App() {
   }
 
   async function stake(token) {
-    console.log(token);
-    await initialize(token.mint);
+    await initialize(token);
   }
 
 
@@ -268,30 +271,42 @@ function App() {
     return (
       <div className="App" style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
         <div className="container">
-          <button className="btn btn-outline-primary mb-4" type="button" onClick={getStarted}>Refresh NFTs</button>
+          {
+            !currentToken ? (<button className="btn btn-outline-primary mb-4" type="button" onClick={getStarted}>Refresh NFTs</button>) :
+              (<div className="col-2 card">
+                <img src={currentToken.data.metadata.image} className="card-img-top" alt="..." />
+                <div className="card-body">
+                  <h5 className="card-title">{currentToken.data.name}</h5>
+                  <p className="card-text">{currentToken.data.metadata?.collection?.name}</p>
+                </div>
+                {/* <div className="card-footer">
+                  <button className="btn btn-sm btn-outline-primary" onClick={async () => stake(d)}>Stake</button>
+                </div> */}
+              </div>)
+          }
           {
             value?.length ? (<div>
-              <button className="btn btn-secondary" onClick={cancel}>cancel</button>
-            </div>) : <div></div>
+              <button className="btn btn-danger" onClick={cancel}>cancel</button>
+            </div>) :
+              <div className="row">
+                {
+                  nfts.map((d, i) =>
+                    <div className="col-sm-6 col-md-4 col-lg-3 col-xl-2 mb-2" key={i}>
+                      <div className="card">
+                        <img src={d.data.metadata.image} className="card-img-top" alt="..." />
+                        <div className="card-body">
+                          <h5 className="card-title">{d.data.name}</h5>
+                          <p className="card-text">{d.data.metadata?.collection?.name}</p>
+                        </div>
+                        <div className="card-footer">
+                          <button className="btn btn-sm btn-outline-primary" onClick={async () => stake(d)}>Stake</button>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                }
+              </div>
           }
-          <div className="row">
-            {
-              nfts.map((d, i) =>
-                <div className="col-sm-6 col-md-4 col-lg-3 col-xl-2 mb-2" key={i}>
-                  <div className="card">
-                    <img src={d.data.metadata.image} className="card-img-top" alt="..." />
-                    <div className="card-body">
-                      <h5 className="card-title">{d.data.name}</h5>
-                      <p className="card-text">{d.data.metadata?.collection?.name}</p>
-                    </div>
-                    <div className="card-footer">
-                      <button className="btn btn-sm btn-outline-primary" onClick={async () => stake(d)}>Stake</button>
-                    </div>
-                  </div>
-                </div>
-              )
-            }
-          </div>
         </div>
       </div>
     );

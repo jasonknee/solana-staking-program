@@ -34,26 +34,26 @@ export const getOrCreateAssociatedTokenAccountAddress = async (tokenMintAddress,
       mintPublicKey,
       wallet.publicKey
     );
-    // console.log('originally found: ' + associatedTokenAccountAddress)
-    //   console.log(associatedTokenAccountAddress);
-    const receiverAccount = await connection.getAccountInfo(associatedTokenAccountAddress);
-    // console.log(receiverAccount);
-    if (receiverAccount === null) {
-      const instruction = await Token.createAssociatedTokenAccountInstruction(
-        mintToken.associatedProgramId,
-        mintToken.programId,
-        mintPublicKey,
-        associatedTokenAccountAddress,
-        wallet.publicKey,
-        wallet.publicKey
-      );
+    // // console.log('originally found: ' + associatedTokenAccountAddress)
+      // console.log(associatedTokenAccountAddress);
+    // const receiverAccount = await connection.getAccountInfo(associatedTokenAccountAddress);
+    // // console.log(receiverAccount);
+    // if (receiverAccount === null) {
+    //   const instruction = await Token.createAssociatedTokenAccountInstruction(
+    //     mintToken.associatedProgramId,
+    //     mintToken.programId,
+    //     mintPublicKey,
+    //     associatedTokenAccountAddress,
+    //     wallet.publicKey,
+    //     wallet.publicKey
+    //   );
 
-      let signed = await wallet.signTransaction(instruction);
-      // const transaction = new Transaction().add(instruction);
-      const txid = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction(txid);
+    //   let signed = await wallet.signTransaction(instruction);
+    //   // const transaction = new Transaction().add(instruction);
+    //   const txid = await connection.sendRawTransaction(signed.serialize());
+    //   await connection.confirmTransaction(txid);
 
-    }
+    // }
 
   }
 
