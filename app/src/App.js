@@ -12,8 +12,6 @@ import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-ad
 import { tokens } from './jajang.json';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { getOrCreateAssociatedTokenAccountAddress } from './util';
-import { get, getAccountAssets } from './utils/nfteyez.client';
-import axios from 'axios';
 const { TOKEN_PROGRAM_ID, Token, AccountLayout } = require("@solana/spl-token");
 const { SystemProgram, Keypair, SYSVAR_RENT_PUBKEY, PublicKey } = web3;
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -54,24 +52,13 @@ function App() {
   async function getStarted() {
     const provider = getProvider();
     const tokens = await getTokenAccountsByOwner(provider.wallet.publicKey.toString());
-    console.log(tokens);
 
     const list = [];
     for (const token of tokens) {
       const fullToken = await getTokenNftMetadata(token.mint);
       list.push(fullToken);
-      console.log(fullToken);
     }
-    // tokens.forEach(async(token) => {
-    //   const fullToken = await getTokenNftMetadata(token.mint);
-    //   list.push(fullToken);
-    //   console.log(fullToken);
-    // })
-
     setNfts(list);
-    console.log(list);
-    console.log(nfts);
-
   }
 
   async function initialize(token) {
@@ -88,11 +75,11 @@ function App() {
     const vault_account_pda = _vault_account_pda;
     const vault_account_bump = _vault_account_bump;
 
-    const [_vault_authority_pda, _vault_authority_bump] = await PublicKey.findProgramAddress(
-      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
-      program.programId
-    );
-    const vault_authority_pda = _vault_authority_pda;
+    // const [_vault_authority_pda, _vault_authority_bump] = await PublicKey.findProgramAddress(
+    //   [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
+    //   program.programId
+    // );
+    // const vault_authority_pda = _vault_authority_pda;
     /* !PDAS */
 
     // const tokenA = tokens[12];
@@ -102,12 +89,7 @@ function App() {
       provider.wallet,
       provider.connection
     );
-    console.log(initializerTokenAccountA.toString());
-    // const initializerTokenAccountA = new PublicKey(initializerTokenAccountAAddress);
-    const initializerTokenAccountInfoA = await provider.connection.getAccountInfo(initializerTokenAccountA);
-    console.log(initializerTokenAccountInfoA)
-
-
+    // const initializerTokenAccountInfoA = await provider.connection.getAccountInfo(initializerTokenAccountA);
 
 
     /* */
@@ -181,11 +163,8 @@ function App() {
         }
       )
 
-      console.log(escrowAccount.publicKey.toString())
       escrowAccountPubKey = escrowAccount.publicKey.toString();
       const account = await program.account.escrowAccount.fetch(escrowAccount.publicKey);
-      console.log('account: ', account);
-      console.log(account);
       setValue(escrowAccountPubKey);
       selectedTokenMintAddress = token.mint;
       setCurrentToken(token);
@@ -235,24 +214,6 @@ function App() {
     setCurrentToken(null);
     setValue(null);
     getStarted();
-  }
-
-  async function update() {
-    if (!input) return
-    const provider = await getProvider();
-    const program = new Program(idl, programID, provider);
-    await program.rpc.update(input, {
-      accounts: {
-        baseAccount: baseAccount.publicKey
-      }
-    });
-
-    const account = await program.account.baseAccount.fetch(baseAccount.publicKey);
-    console.log('account: ', account);
-    console.log(account.startTimestamp.toString());
-    setValue(account.data.toString());
-    setDataList(account.dataList);
-    setInput('');
   }
 
   async function stake(token) {
