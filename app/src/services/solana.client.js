@@ -1,6 +1,6 @@
 import axios from "axios";
 import { PublicKey } from '@solana/web3.js'
-import { decodeMetadata } from "./metadata.deserializer";
+import { decodeMetadata } from "../utils/metadata.deserializer";
 
 const MAINNET_URL = `https://api.devnet.solana.com`;
 const DEFAULT_AXIOS_CONFIG = {
