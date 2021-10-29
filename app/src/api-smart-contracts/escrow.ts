@@ -4,7 +4,8 @@ import { getSolanaProvider } from "../services/solana";
 import { getOrCreateAssociatedTokenAccountAddress } from "../utils/token";
 import { tokens } from '../jajang.json';
 import idl from '../idl.json';
-
+import { saveStakingAccount } from '../api/staking-accounts';
+import { StakingAccountStatuses, StakingAccountTokenTypes } from '../utils/constants';
 const {
   SystemProgram,
   Keypair,
@@ -27,7 +28,8 @@ const init = (wallet: any = null) => {
   program = new Program(idl as Idl, programID, provider);
 }
 
-export const initEscrow = async (mintId: string, wallet: any = null) => {
+export const initEscrow = async (challengeId: any, token: any, wallet: any = null) => {
+  const mintId = token.mint;
   init(wallet);
 
   const [vault_account_pda, vault_account_bump] = await PublicKey.findProgramAddress(
@@ -44,6 +46,19 @@ export const initEscrow = async (mintId: string, wallet: any = null) => {
     DEFAULT_TOKEN_B,
     provider
   );
+
+  await saveStakingAccount({
+    walletAccountId: provider.wallet.publicKey.toString(),
+    stakingAccountId: escrowAccount.publicKey.toString(),
+    startedAtUnix:  new Date().getTime(),
+    endedAtUnix: null,
+    challengeId: challengeId,
+    stakeStatusChallengeId: `${StakingAccountStatuses.INITIALIZED}#${challengeId}`,
+    type: StakingAccountTokenTypes.WEAPON,
+    status: StakingAccountStatuses.INITIALIZED,
+    tokenId: mintId,
+    token
+  });
 
   await program.rpc.initializeEscrow(
     vault_account_bump,

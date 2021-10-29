@@ -7,8 +7,12 @@ import { getPhantomWallet } from '@solana/wallet-adapter-wallets';
 import { useWallet, WalletProvider, ConnectionProvider } from '@solana/wallet-adapter-react';
 import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { cancelEscrow, initEscrow } from './api-smart-contracts/escrow';
+import { getStakingAccountsForChallengeByStatus } from './api/staking-accounts';
+import { StakingAccountStatuses } from './utils/constants';
 require('@solana/wallet-adapter-react-ui/styles.css');
-const wallets = [getPhantomWallet()]
+const wallets = [getPhantomWallet()];
+
+const DEFAULT_CHALLENGE_ID = `875b3973-2b6e-4d91-a293-f1b40356a3c7`;
 
 function App() {
   const [currentToken, setCurrentToken] = useState();
@@ -25,10 +29,28 @@ function App() {
       list.push(fullToken);
     }
     setNfts(list);
+
+  }
+
+  async function loadActiveStakingAccount() {
+    const [stakingAccount] = await getStakingAccountsForChallengeByStatus(
+      wallet.publicKey.toString(),
+      DEFAULT_CHALLENGE_ID,
+      StakingAccountStatuses.INITIALIZED
+    );
+
+    console.log(stakingAccount);
+    if (!stakingAccount) {
+      await refreshNfts();
+    } else {
+      setCurrentToken(stakingAccount.token);
+      setValue(stakingAccount.stakingAccountId);
+    }
+
   }
 
   async function stake(token) {
-    const escrowAccount = await initEscrow(token.mint, wallet);
+    const escrowAccount = await initEscrow(DEFAULT_CHALLENGE_ID, token, wallet);
     setCurrentToken(token);
     setValue(escrowAccount.publicKey.toString());
   }
@@ -50,7 +72,7 @@ function App() {
       <div className="App" style={{ display: 'flex', justifyContent: 'center', marginTop: '100px' }}>
         <div className="container">
           {
-            !currentToken ? (<button className="btn btn-outline-primary mb-4" type="button" onClick={refreshNfts}>Refresh NFTs</button>) :
+            !currentToken ? (<button className="btn btn-outline-primary mb-4" type="button" onClick={loadActiveStakingAccount}>SYNC</button>) :
               (<div className="col-2 card">
                 <img src={currentToken.data.metadata.image} className="card-img-top" alt="..." />
                 <div className="card-body">

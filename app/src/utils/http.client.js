@@ -13,7 +13,7 @@ const client = axios.create({
 
 export const get = async (url) => {
   const response = await client.get(url);
-  return response?.data?.map(data => metadataSchema(data));
+  return response?.data;//?.map(data => metadataSchema(data));
 }
 
 export const post = async (url, body) => {

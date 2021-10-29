@@ -6,7 +6,8 @@
         "@solana/wallet-adapter-react": "^0.13.1",
         "@solana/wallet-adapter-react-ui": "^0.6.0",
         "@solana/wallet-adapter-wallets": "^0.11.1",
-        "@solana/web3.js": "^1.30.0"
+        "@solana/web3.js": "^1.30.0",
+        "luxon": "^2.0.2"
     },
     "devDependencies": {
         "chai": "^4.3.4",
