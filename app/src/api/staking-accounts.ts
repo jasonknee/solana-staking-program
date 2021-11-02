@@ -1,6 +1,6 @@
 import { post, get } from "../utils/http.client"
 
-const BASE_URL = "http://localhost:3001";//"https://r0vik0dztf.execute-api.us-east-1.amazonaws.com/prod"
+const BASE_URL = "http://localhost:4200";
 export const getStakingAccountsForChallengeByStatus = async (walletAccountId: string, challengeId: string, status: string) => {
   const url = `${BASE_URL}/wallet_accounts/${walletAccountId}/staking_accounts?challengeId=${challengeId}&status=${status}`
   const response = await get(url);
