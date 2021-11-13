@@ -8,7 +8,7 @@ const client = axios.create({
   baseURL: '',
   timeout: 5000,
   responseType: 'json',
-  headers: { Pragma: "no-cache" },
+  // headers: { Pragma: "no-cache" },
 });
 
 export const get = async (url) => {

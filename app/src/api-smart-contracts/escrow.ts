@@ -47,19 +47,6 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
     provider
   );
 
-  await saveStakingAccount({
-    walletAccountId: provider.wallet.publicKey.toString(),
-    stakingAccountId: escrowAccount.publicKey.toString(),
-    startedAtUnix:  new Date().getTime(),
-    endedAtUnix: null,
-    challengeId: challengeId,
-    stakeStatusChallengeId: `${StakingAccountStatuses.INITIALIZED}#${challengeId}`,
-    type: StakingAccountTokenTypes.WEAPON,
-    status: StakingAccountStatuses.INITIALIZED,
-    tokenId: mintId,
-    token
-  });
-
   await program.rpc.initializeEscrow(
     vault_account_bump,
     new BN(1),
@@ -82,6 +69,19 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
       signers: [escrowAccount],
     }
   )
+
+  await saveStakingAccount({
+    walletAccountId: provider.wallet.publicKey.toString(),
+    stakingAccountId: escrowAccount.publicKey.toString(),
+    startedAtUnix:  new Date().getTime(),
+    endedAtUnix: null,
+    challengeId: challengeId,
+    stakeStatusChallengeId: `${StakingAccountStatuses.INITIALIZED}#${challengeId}`,
+    type: StakingAccountTokenTypes.WEAPON,
+    status: StakingAccountStatuses.INITIALIZED,
+    tokenId: mintId,
+    token
+  });
   
   console.log(escrowAccount.publicKey.toString());
   return escrowAccount;
