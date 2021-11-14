@@ -1,7 +1,11 @@
-const anchor = require("@project-serum/anchor");
-const { PublicKey, Transaction, SystemProgram } = anchor.web3;
-const { TOKEN_PROGRAM_ID, Token } = require("@solana/spl-token");
-const assert = require("assert");
+import * as anchor from "@project-serum/anchor";
+import {
+	PublicKey,
+	SystemProgram,
+  Transaction,
+} from '@solana/web3.js';
+import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { assert } from "chai";
 
 describe("escrow", () => {
   const provider = anchor.Provider.env();
@@ -237,7 +241,7 @@ describe("escrow", () => {
     // TODO: Assert if the PDA token account is closed
 
     // Check the final owner should be the provider public key.
-    _initializerTokenAccountA = await mintA.getAccountInfo(initializerTokenAccountA);
+    const _initializerTokenAccountA = await mintA.getAccountInfo(initializerTokenAccountA);
     assert.ok(_initializerTokenAccountA.owner.equals(initializerMainAccount.publicKey));
 
     // Check all the funds are still there.

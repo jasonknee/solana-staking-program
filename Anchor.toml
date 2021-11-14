@@ -1,12 +1,6 @@
-[programs.localnet]
-solana_staking_program = "FySbTTRioMtRsS2CFvRtSSQbnv2QNQNfPD7Ng5NMS67u"
-
-[registry]
-url = "https://anchor.projectserum.com"
-
 [provider]
 cluster = "localnet"
-wallet = "/Users/jayce/.config/solana/id.json"
+wallet = "~/.config/solana/id.json"# birth across method rhythm erupt endorse fire misery dignity hero option grit
 
 [scripts]
-test = "mocha -t 1000000 tests/"
+test = "mocha --require ts-node/register tests/*.ts -t 1000000"
