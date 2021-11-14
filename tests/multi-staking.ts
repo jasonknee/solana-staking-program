@@ -7,7 +7,7 @@ import {
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
 
-describe("escrow", () => {
+describe("multiStaking", () => {
   const provider = anchor.Provider.env();
   anchor.setProvider(provider);
 
