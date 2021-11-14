@@ -32,11 +32,6 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
   const mintId = token.mint;
   init(wallet);
 
-  const [vault_account_pda, vault_account_bump] = await PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode("token-seed"))],
-    program.programId
-  );
-
   const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
     mintId,
     provider
@@ -45,6 +40,19 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
   const initializerTokenAccountB = await getOrCreateAssociatedTokenAccountAddress(
     DEFAULT_TOKEN_B,
     provider
+  );
+
+  console.log(mintId);
+  console.log(initializerTokenAccountA);
+  console.log(initializerTokenAccountA.toBuffer());
+  const mintPublicKey = new PublicKey(mintId);
+    console.log(mintPublicKey.toBuffer())
+  const [vault_account_pda, vault_account_bump] = await PublicKey.findProgramAddress(
+    [
+      // Buffer.from(utils.bytes.utf8.encode("token-seed")),
+      mintPublicKey.toBuffer()
+    ],
+    program.programId
   );
 
   await program.rpc.initializeEscrow(

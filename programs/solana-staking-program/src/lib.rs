@@ -21,6 +21,8 @@ use spl_token::instruction::AuthorityType;
 
 declare_id!("AzPPcUdBfeGLcquFTZDJw62f1vSjy4fa29tqRG6E21EX");
 
+// Processor
+
 #[program]
 pub mod escrow {
     use super::*;
@@ -117,6 +119,8 @@ pub mod escrow {
     }
 }
 
+// instructions
+
 #[derive(Accounts)]
 #[instruction(vault_account_bump: u8, initializer_amount: u64)]
 pub struct InitializeEscrow<'info> {
@@ -125,7 +129,7 @@ pub struct InitializeEscrow<'info> {
     pub mint: Account<'info, Mint>,
     #[account(
         init,
-        seeds = [b"token-seed".as_ref()],
+        seeds = [b"the-forge".as_ref(), &initializer_deposit_token_account.mint.to_bytes()],
         bump = vault_account_bump,
         payer = initializer,
         token::mint = mint,
@@ -201,6 +205,8 @@ pub struct EscrowAccount {
     pub initializer_amount: u64,
     pub taker_amount: u64,
 }
+
+// Utils
 
 impl<'info> InitializeEscrow<'info> {
     fn into_transfer_to_pda_context(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {

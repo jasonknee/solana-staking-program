@@ -107,7 +107,10 @@ describe("escrow", () => {
 
   it("Initialize escrow", async () => {
     const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
-      [Buffer.from(anchor.utils.bytes.utf8.encode("token-seed"))],
+      [
+        Buffer.from(anchor.utils.bytes.utf8.encode("the-forge")),
+        mintA.publicKey.toBuffer()
+      ],
       program.programId
     );
     vault_account_pda = _vault_account_pda;
