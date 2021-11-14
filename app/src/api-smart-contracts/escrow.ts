@@ -4,31 +4,32 @@ import { getSolanaProvider } from "../services/solana";
 import { getOrCreateAssociatedTokenAccountAddress } from "../utils/token";
 import { tokens } from '../jajang.json';
 import idl from '../idl.json';
-import { saveStakingAccount } from '../api/staking-accounts';
+import { saveStakingAccount, updateStakingAccount } from '../api/staking-accounts';
 import { StakingAccountStatuses, StakingAccountTokenTypes } from '../utils/constants';
+
 const {
   SystemProgram,
   Keypair,
   SYSVAR_RENT_PUBKEY,
-  PublicKey
+  PublicKey,
+  SYSVAR_CLOCK_PUBKEY
 } = web3;
 
 const DEFAULT_TOKEN_B = tokens[6];
 
 let programID: any;
-let escrowAccount: any;
 let program: any;
 let provider: any;
 
 const init = (wallet: any = null) => {
   if (program) return;
   programID = new PublicKey(idl.metadata.address);
-  escrowAccount = Keypair.generate();
   provider = getSolanaProvider(wallet);
   program = new Program(idl as Idl, programID, provider);
 }
 
 export const initEscrow = async (challengeId: any, token: any, wallet: any = null) => {
+  const escrowAccount = Keypair.generate();
   const mintId = token.mint;
   init(wallet);
 
@@ -49,7 +50,7 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
     console.log(mintPublicKey.toBuffer())
   const [vault_account_pda, vault_account_bump] = await PublicKey.findProgramAddress(
     [
-      // Buffer.from(utils.bytes.utf8.encode("token-seed")),
+      Buffer.from(utils.bytes.utf8.encode("the-forge")),
       mintPublicKey.toBuffer()
     ],
     program.programId
@@ -70,6 +71,7 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
         tokenProgram: TOKEN_PROGRAM_ID,
+        clock: SYSVAR_CLOCK_PUBKEY
       },
       instructions: [
         await program.account.escrowAccount.createInstruction(escrowAccount),
@@ -78,10 +80,17 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
     }
   )
 
-  await saveStakingAccount({
+  console.log(escrowAccount.publicKey.toString());
+
+  let _escrowAccount = await program.account.escrowAccount.fetch(
+    escrowAccount.publicKey.toString()
+  );
+  console.log(_escrowAccount.startedAtTimestamp.toNumber())
+
+  const stakingAccount = {
     walletAccountId: provider.wallet.publicKey.toString(),
     stakingAccountId: escrowAccount.publicKey.toString(),
-    startedAtUnix:  new Date().getTime(),
+    startedAtUnix:  _escrowAccount.startedAtTimestamp.toNumber(),
     endedAtUnix: null,
     challengeId: challengeId,
     stakeStatusChallengeId: `${StakingAccountStatuses.INITIALIZED}#${challengeId}`,
@@ -89,18 +98,27 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
     status: StakingAccountStatuses.INITIALIZED,
     tokenId: mintId,
     token
-  });
+  };
+  await saveStakingAccount(stakingAccount);
   
-  console.log(escrowAccount.publicKey.toString());
-  return escrowAccount;
+
+  return stakingAccount;
 };
 
 export const cancelEscrow = async (escrowAccountId: string, token: string, wallet: any = null) => {
   init(wallet); 
 
+  const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
+    token,
+    provider
+  );
+
   /* PDAs */
   const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
-    [Buffer.from(utils.bytes.utf8.encode("token-seed"))],
+    [
+      Buffer.from(utils.bytes.utf8.encode("the-forge")),
+      new PublicKey(token).toBuffer()
+    ],
     program.programId
   );
   const vault_account_pda = _vault_account_pda;
@@ -113,10 +131,12 @@ export const cancelEscrow = async (escrowAccountId: string, token: string, walle
   const vault_authority_pda = _vault_authority_pda;
   /* !PDAS */
 
-  const initializerTokenAccountA = await getOrCreateAssociatedTokenAccountAddress(
-    token,
-    provider
+  let _escrowAccount = await program.account.escrowAccount.fetch(
+    escrowAccountId
   );
+  console.log(_escrowAccount.startedAtTimestamp.toNumber());
+
+
   // Cancel the escrow.
   await program.rpc.cancelEscrow({
     accounts: {
@@ -128,4 +148,9 @@ export const cancelEscrow = async (escrowAccountId: string, token: string, walle
       tokenProgram: TOKEN_PROGRAM_ID,
     }
   });
+
+  await updateStakingAccount(provider.wallet.publicKey.toString(), escrowAccountId, 'SYNCING_METADATA')
+
+
 }
+

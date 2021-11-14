@@ -19,7 +19,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, CloseAccount, Mint, SetAuthority, TokenAccount, Transfer};
 use spl_token::instruction::AuthorityType;
 
-declare_id!("AzPPcUdBfeGLcquFTZDJw62f1vSjy4fa29tqRG6E21EX");
+declare_id!("BpLz4uPJQrugk7meX1miE965xX6zX7eMZUBrx2UU1Fja");
 
 // Processor
 
