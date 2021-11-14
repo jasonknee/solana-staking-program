@@ -185,6 +185,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenA),
@@ -247,6 +248,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenB),
@@ -336,6 +338,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenC),
@@ -399,6 +402,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenA),
