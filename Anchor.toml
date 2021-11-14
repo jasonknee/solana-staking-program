@@ -1,6 +1,6 @@
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/id.json"# birth across method rhythm erupt endorse fire misery dignity hero option grit
+cluster = "devnet"
+wallet = "~/.config/solana/candyfactory-devnet.json"# birth across method rhythm erupt endorse fire misery dignity hero option grit
 
 [scripts]
 test = "mocha --require ts-node/register tests/*.ts -t 1000000"
