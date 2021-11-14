@@ -9,5 +9,8 @@
     "bn.js": "^5.2.0",
     "camelcase": "^6.2.0",
     "chai": "^4.3.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.22"
   }
 }

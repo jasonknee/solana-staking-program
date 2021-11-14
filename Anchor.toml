@@ -1,5 +1,5 @@
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/candyfactory-devnet.json"# birth across method rhythm erupt endorse fire misery dignity hero option grit
 
 [scripts]
