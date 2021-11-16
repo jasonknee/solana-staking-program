@@ -40,7 +40,7 @@ function App() {
     const stakingAccounts = await getStakingAccountsForChallengeByStatus(
       wallet.publicKey.toString(),
       DEFAULT_CHALLENGE_ID,
-      StakingAccountStatuses.INITIALIZED
+      StakingAccountStatuses.STARTED
     );
 
     await refreshNfts();

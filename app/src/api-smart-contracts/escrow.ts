@@ -42,12 +42,8 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
     DEFAULT_TOKEN_B,
     provider
   );
-
-  console.log(mintId);
-  console.log(initializerTokenAccountA);
-  console.log(initializerTokenAccountA.toBuffer());
+  
   const mintPublicKey = new PublicKey(mintId);
-    console.log(mintPublicKey.toBuffer())
   const [vault_account_pda, vault_account_bump] = await PublicKey.findProgramAddress(
     [
       Buffer.from(utils.bytes.utf8.encode("the-forge")),
@@ -55,6 +51,19 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
     ],
     program.programId
   );
+
+  const stakingAccount = {
+    walletAccountId: provider.wallet.publicKey.toString(),
+    stakingAccountId: escrowAccount.publicKey.toString(),
+    endedAtUnix: null,
+    challengeId: challengeId,
+    stakeStatusChallengeId: `${StakingAccountStatuses.STARTED}#${challengeId}`,
+    type: StakingAccountTokenTypes.WEAPON,
+    status: StakingAccountStatuses.STARTED,
+    tokenId: mintId,
+    token
+  };
+  await saveStakingAccount(stakingAccount);
 
   await program.rpc.initializeEscrow(
     vault_account_bump,
@@ -79,28 +88,17 @@ export const initEscrow = async (challengeId: any, token: any, wallet: any = nul
       signers: [escrowAccount],
     }
   )
-
-  console.log(escrowAccount.publicKey.toString());
-
-  let _escrowAccount = await program.account.escrowAccount.fetch(
-    escrowAccount.publicKey.toString()
-  );
-  console.log(_escrowAccount.startedAtTimestamp.toNumber())
-
-  const stakingAccount = {
-    walletAccountId: provider.wallet.publicKey.toString(),
-    stakingAccountId: escrowAccount.publicKey.toString(),
-    startedAtUnix:  _escrowAccount.startedAtTimestamp.toNumber(),
-    endedAtUnix: null,
-    challengeId: challengeId,
-    stakeStatusChallengeId: `${StakingAccountStatuses.INITIALIZED}#${challengeId}`,
-    type: StakingAccountTokenTypes.WEAPON,
-    status: StakingAccountStatuses.INITIALIZED,
-    tokenId: mintId,
-    token
-  };
-  await saveStakingAccount(stakingAccount);
   
+
+  // let _escrowAccount = await program.account.escrowAccount.fetch(
+  //   escrowAccount.publicKey.toString()
+  // );
+  
+  await updateStakingAccount(
+    provider.wallet.publicKey.toString(), 
+    escrowAccount.publicKey.toString(), 
+    StakingAccountStatuses.STAKE_REQUESTED
+  );
 
   return stakingAccount;
 };
@@ -149,7 +147,7 @@ export const cancelEscrow = async (escrowAccountId: string, token: string, walle
     }
   });
 
-  await updateStakingAccount(provider.wallet.publicKey.toString(), escrowAccountId, 'SYNCING_METADATA')
+  await updateStakingAccount(provider.wallet.publicKey.toString(), escrowAccountId, StakingAccountStatuses.UNSTAKE_REQUESTED);
 
 
 }

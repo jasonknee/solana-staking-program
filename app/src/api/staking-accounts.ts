@@ -1,6 +1,6 @@
 import { post, get, patch } from "../utils/http.client"
 
-const BASE_URL = "http://localhost:3200";//"https://api.notsofungible.world/v1";
+const BASE_URL = "https://api.notsofungible.world/v1";
 export const getStakingAccountsForChallengeByStatus = async (walletAccountId: string, challengeId: string, status: string) => {
   const url = `${BASE_URL}/wallet_accounts/${walletAccountId}/staking_accounts?challengeId=${challengeId}&status=${status}`
   const response = await get(url);
