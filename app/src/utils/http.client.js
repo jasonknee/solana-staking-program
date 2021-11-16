@@ -20,3 +20,8 @@ export const post = async (url, body) => {
   const response = await client.post(url, body);
   return response;
 }
+
+export const patch = async (url, body) => {
+  const response = await client.patch(url, body);
+  return response;
+}

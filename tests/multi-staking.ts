@@ -6,6 +6,7 @@ import {
 } from '@solana/web3.js';
 import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
 import { assert } from "chai";
+import { DateTime, Interval } from 'luxon';
 
 describe("multiStaking", () => {
   const provider = anchor.Provider.env();
@@ -153,7 +154,7 @@ describe("multiStaking", () => {
   });
 
   it("Stake A", async () => {
-
+    const earlier = DateTime.utc();
     const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
       [
         Buffer.from(anchor.utils.bytes.utf8.encode("the-forge")),
@@ -185,6 +186,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenA),
@@ -199,6 +201,8 @@ describe("multiStaking", () => {
       escrowAccountTokenA.publicKey
     );
 
+    
+    const escrowStartedAt = DateTime.fromSeconds(_escrowAccount.startedAtTimestamp.toNumber());
     // Check that the new owner is the PDA.
     assert.ok(_vault.owner.equals(vault_authority_pda));
 
@@ -212,6 +216,12 @@ describe("multiStaking", () => {
     assert.ok(
       _escrowAccount.initializerReceiveTokenAccount.equals(initializerTokenAccountDummy)
     );
+    assert.ok(earlier >= escrowStartedAt);
+
+    const diff = Interval.fromDateTimes(escrowStartedAt, earlier);
+    const diffSeconds = diff.length('seconds');
+    assert.ok(60 >= diffSeconds)
+    assert.ok(escrowStartedAt <=  DateTime.utc().plus({ minutes: 1}));
   });
 
   it("Stake B", async () => {
@@ -247,6 +257,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenB),
@@ -336,6 +347,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenC),
@@ -399,6 +411,7 @@ describe("multiStaking", () => {
           systemProgram: anchor.web3.SystemProgram.programId,
           rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           tokenProgram: TOKEN_PROGRAM_ID,
+          clock: anchor.web3.SYSVAR_CLOCK_PUBKEY
         },
         instructions: [
           await program.account.escrowAccount.createInstruction(escrowAccountTokenA),

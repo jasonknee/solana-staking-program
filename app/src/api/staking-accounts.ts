@@ -1,4 +1,4 @@
-import { post, get } from "../utils/http.client"
+import { post, get, patch } from "../utils/http.client"
 
 const BASE_URL = "https://api.notsofungible.world/v1";
 export const getStakingAccountsForChallengeByStatus = async (walletAccountId: string, challengeId: string, status: string) => {
@@ -14,3 +14,10 @@ export const saveStakingAccount = async (stakingAccount: any) => {
   console.log(response);
 }
 
+export const updateStakingAccount = async (walletAccountId: string, stakingAccountId: string, status: string) => {
+  const body = { status };
+  const url = `${BASE_URL}/wallet_accounts/${walletAccountId}/staking_accounts/${stakingAccountId}`
+  const response = await patch(url, body);
+  console.log(response);
+  return response?.payload;
+}

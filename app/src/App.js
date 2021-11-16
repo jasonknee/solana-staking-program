@@ -1,6 +1,6 @@
 
 import './forge.css';
-// import './custom.css';
+import './App.css';
 import React, { useState } from 'react';
 
 import { getTokenAccountsByOwner, getTokenNftMetadata } from './services/solana.client';
@@ -20,6 +20,8 @@ function App() {
   const [value, setValue] = useState('');
   const wallet = useWallet()
   const [nfts, setNfts] = useState([]);
+  const [stakedItems, setStakedItems] = useState([]);
+  const [selectedStakingAccount, selectStakingAccount] = useState();
 
   async function refreshNfts() {
     const tokens = await getTokenAccountsByOwner(wallet.publicKey.toString());
@@ -29,38 +31,56 @@ function App() {
       const fullToken = await getTokenNftMetadata(token.mint);
       list.push(fullToken);
     }
+    console.log(list);
     setNfts(list);
 
   }
 
   async function loadActiveStakingAccount() {
-    const [stakingAccount] = await getStakingAccountsForChallengeByStatus(
+    const stakingAccounts = await getStakingAccountsForChallengeByStatus(
       wallet.publicKey.toString(),
       DEFAULT_CHALLENGE_ID,
-      StakingAccountStatuses.INITIALIZED
+      StakingAccountStatuses.STARTED
     );
 
-    console.log(stakingAccount);
-    if (!stakingAccount) {
-      await refreshNfts();
-    } else {
-      setCurrentToken(stakingAccount.token);
-      setValue(stakingAccount.stakingAccountId);
-    }
+    await refreshNfts();
+    if (stakingAccounts?.length)
+      setStakedItems(stakingAccounts);
 
   }
 
   async function stake(token) {
-    const escrowAccount = await initEscrow(DEFAULT_CHALLENGE_ID, token, wallet);
-    setCurrentToken(token);
-    setValue(escrowAccount.publicKey.toString());
+    console.log(token);
+    const stakingAccount = await initEscrow(DEFAULT_CHALLENGE_ID, token, wallet);
+    setStakedItems([
+      ...stakedItems,
+      stakingAccount
+    ]);
+    console.log(token);
+    const updatedNfts = nfts.filter(nft => nft.mint != token.mint);
+    console.log(updatedNfts)
+    setNfts(updatedNfts);
   }
 
   async function cancel() {
-    await cancelEscrow(value, currentToken.mint, wallet);
-    setCurrentToken(null);
-    setValue(null);
+    const {
+      stakingAccountId,
+      tokenId,
+      token
+    } = selectedStakingAccount;
+    await cancelEscrow(stakingAccountId, tokenId, wallet);
+    console.log(stakedItems);
+    console.log(tokenId);
+    setStakedItems(stakedItems.filter(account => account.tokenId != tokenId));
+    setNfts([ ...nfts, token])
+    selectStakingAccount(null);
   }
+
+  async function selectStakedToken(stakingAccount) {
+    selectStakingAccount(stakingAccount);
+    console.log(stakingAccount);
+  }
+
   return (
     <React.Fragment>
       <img src="https://i.imgur.com/NLMkIzR.png" className="bg-image" />
@@ -69,54 +89,45 @@ function App() {
           <div className="container-fluid px-4 px-lg-0">
             <h1 className="fst-italic lh-1 mb-2">The Forge</h1>
             <p className="mb-4">Select your Weapon</p>
-            {
-              !wallet.connected ? 
-              (
-                <WalletMultiButton />
-              )
-              :
-              (
-                <div className="container px-0">
-          {
-            value?.length ? (<div>
-              <button className="btn btn-outline-light btn-lg mb-4 rounded-0" onClick={cancel}>Unstake</button>
-            </div>) :
-              <div className="row">
-                {
-                  nfts.map((d, i) =>
-                    <div className="col-sm-6 pl-0 cursor-pointer" key={i} onClick={async () => stake(d)}>
-                        <img src={d.data.metadata.image} className="card-img-top" alt="..." />
+            <button className="btn btn-outline-light btn-lg w-100 mb-4 rounded-0" type="button" onClick={loadActiveStakingAccount}>RELOAD</button>
 
-                      {/* <div className="card">
-                        <img src={d.data.metadata.image} className="card-img-top" alt="..." />
-                        <div className="card-body">
-                          <h5 className="card-title">{d.data.name}</h5>
-                          <p className="card-text">{d.data.metadata?.collection?.name}</p>
-                        </div>
-                        <div className="card-footer">
-                          <button className="btn btn-sm btn-outline-primary" onClick={async () => stake(d)}>Stake</button>
-                        </div>
-                      </div> */}
+            {
+              !wallet.connected ?
+                (
+                  <WalletMultiButton />
+                )
+                :
+                (
+                  <div className="container px-0">
+
+                    <div className="row">
+                      <h3>Wallet</h3>
+                      {
+                        nfts.map((d, i) =>
+                          <div className="col-sm-6 pl-0 cursor-pointer" key={i} onClick={async () => stake(d)}>
+                            <img src={d.data.metadata.image} className="card-img-top mb-3" alt="..." />
+                          </div>
+                        )
+                      }
                     </div>
-                  )
-                }
-              </div>
-          }
-          {
-             !currentToken ? (<button className="btn btn-outline-light btn-lg mt-4 rounded-0" type="button" onClick={loadActiveStakingAccount}>RELOAD</button>) :
-               (<div className="col-6 p-0">
-                 <img src={currentToken.data.metadata.image} className="card-img-top" alt="..." />
-                 {/* <div className="card-body">
-                   <h5 className="card-title">{currentToken.data.name}</h5>
-                   <p className="card-text">{currentToken.data.metadata?.collection?.name}</p>
-                 </div> */}
-                 {/* <div className="card-footer">
-                   <button className="btn btn-sm btn-outline-primary" onClick={async () => stake(d)}>Stake</button>
-                 </div> */}
-               </div>)
-           }
-        </div>
-              )
+                    <h3 className="mt-5">Staked</h3>
+                    <div className="row">
+                      {
+                        stakedItems?.length ? (
+                          stakedItems?.map((item, i) =>
+                            <div className="col-sm-6 pl-0 cursor-pointer" key={i} onClick={async () => selectStakedToken(item)}>
+                              <img src={item?.token?.data?.metadata?.image} className="card-img-top mb-3" alt="..." />
+                            </div>)
+                        ) : <></>
+                      }
+                    </div>
+                    {
+                      stakedItems?.length ? (<div>
+                        <button className={"btn btn-block w-100 btn-lg my-4 rounded-0 " + (selectedStakingAccount ? 'btn-light' : 'btn-outline-light')} onClick={cancel} disabled={!selectedStakingAccount}>Unstake</button>
+                      </div>) : <> </>
+                    }
+                  </div>
+                )
             }
           </div>
         </div>

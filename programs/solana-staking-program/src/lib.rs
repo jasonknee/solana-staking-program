@@ -19,7 +19,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, CloseAccount, Mint, SetAuthority, TokenAccount, Transfer};
 use spl_token::instruction::AuthorityType;
 
-declare_id!("AzPPcUdBfeGLcquFTZDJw62f1vSjy4fa29tqRG6E21EX");
+declare_id!("BpLz4uPJQrugk7meX1miE965xX6zX7eMZUBrx2UU1Fja");
 
 // Processor
 
@@ -35,6 +35,8 @@ pub mod escrow {
         initializer_amount: u64,
         taker_amount: u64,
     ) -> ProgramResult {
+        let clock = &ctx.accounts.clock;
+
         ctx.accounts.escrow_account.initializer_key = *ctx.accounts.initializer.key;
         ctx.accounts
             .escrow_account
@@ -52,6 +54,8 @@ pub mod escrow {
             .key;
         ctx.accounts.escrow_account.initializer_amount = initializer_amount;
         ctx.accounts.escrow_account.taker_amount = taker_amount;
+        ctx.accounts.escrow_account.started_at_timestamp = clock.unix_timestamp;
+
 
         let (vault_authority, _vault_authority_bump) =
             Pubkey::find_program_address(&[ESCROW_PDA_SEED], ctx.program_id);
@@ -147,6 +151,7 @@ pub struct InitializeEscrow<'info> {
     pub system_program: AccountInfo<'info>,
     pub rent: Sysvar<'info, Rent>,
     pub token_program: AccountInfo<'info>,
+    pub clock: Sysvar<'info, Clock>
 }
 
 #[derive(Accounts)]
@@ -204,6 +209,7 @@ pub struct EscrowAccount {
     pub initializer_receive_token_account: Pubkey,
     pub initializer_amount: u64,
     pub taker_amount: u64,
+    pub started_at_timestamp: i64,
 }
 
 // Utils
